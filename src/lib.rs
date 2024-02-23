@@ -1,7 +1,7 @@
 mod hashmap;
 
 pub fn add(left: usize, right: usize) -> usize {
-    let _h = hashmap::HashMap::<String, String>::new();
+    let _h = hashmap::MyHashmap::<String, String>::new();
     left + right
 }
 
