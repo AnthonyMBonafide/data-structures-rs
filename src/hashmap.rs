@@ -1,47 +1,29 @@
-const DEFAULT_SIZE: usize = 50;
-#[derive(Debug)]
-pub struct HashMap<K, V>
-where
-    K: Clone + PartialEq,
-{
+const DEFAULT_SIZE: usize = 256;
+pub struct MyHashmap<K, V> {
+    // A guess at how many elements the hashmap will manage.
     size: usize,
 
-    elements: Vec<Vec<(K, V)>>,
-    hasher: fn(&K) -> usize,
+    // The "table" which will hold all the data
+    hash_elements: [Option<KeyValue<K, V>>; DEFAULT_SIZE],
+}
+#[derive(Clone, Debug)]
+struct KeyValue<K, V> {
+    key: K,
+    value: V,
+    next: Option<Box<KeyValue<K, V>>>,
 }
 
-impl<K, V> HashMap<K, V>
-where
-    K: Clone + PartialEq,
-{
-    pub fn new() -> Self {
-        HashMap {
+impl<K: PartialEq + Clone, V: Clone> MyHashmap<K, V> {
+    const INIT: Option<KeyValue<K, V>> = None;
+    pub fn new() -> MyHashmap<K, V> {
+        MyHashmap {
             size: DEFAULT_SIZE,
-            elements: Vec::new(),
-            hasher: default_hasher,
-        }
-    }
-
-    //TODO: Ensure we check if the key already exists and overwrite it
-    pub fn insert(&mut self, key: &K, value: V) {
-        let hashkey = (self.hasher)(key);
-        let index = hashkey % self.size;
-        self.elements[index].push((key.clone(), value));
-    }
-
-    fn get(&self, key: &K) -> Option<&V> {
-        let hashkey = (self.hasher)(key);
-        let index = hashkey % self.size;
-        let collision_bucket: &Vec<(K, V)> = self.elements[index].as_ref();
-
-        match collision_bucket.iter().find(|(k, _)| k == key) {
-            Some((_, v)) => Some(v),
-            None => None,
+            hash_elements: [Self::INIT; DEFAULT_SIZE],
         }
     }
 }
 
-//TODO: figure out how to hash properly
-fn default_hasher<K>(input: &K) -> usize {
+// TODO: Implement a real hash function
+fn hash_key<T>(key: T) -> usize {
     return 1;
 }
