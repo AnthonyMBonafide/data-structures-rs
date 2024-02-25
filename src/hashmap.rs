@@ -1,8 +1,5 @@
 use std::{
-    borrow::Borrow,
-    cell::RefCell,
     hash::{DefaultHasher, Hash, Hasher},
-    rc::Rc,
     u64,
 };
 
@@ -16,6 +13,7 @@ pub struct MyHashmap<K, V> {
     hash_elements: Vec<Bucket<K, V>>,
     hasher: fn(key: K) -> usize,
 }
+
 #[derive(Debug, Clone)]
 struct Bucket<K, V> {
     head: Option<KeyValue<K, V>>,
@@ -35,19 +33,17 @@ where
             return None;
         }
 
-        let mut list_head: KeyValue<K, V> = self.head.unwrap();
-
-        if list_head.key == key {
-            return Some(&list_head.value.clone());
+        if self.head.as_ref().unwrap().key == key {
+            return Some(&self.head.as_ref().unwrap().value);
         }
         // Loop through list
-        let mut loop_variable = list_head.next;
+        let mut loop_variable = &self.head.as_ref().unwrap().next;
         while loop_variable.is_some() {
-            if loop_variable.unwrap().key == key {
-                return Some(&loop_variable.unwrap().value);
+            if loop_variable.as_ref().unwrap().key == key {
+                return Some(&loop_variable.as_ref().unwrap().value);
             }
 
-            loop_variable = loop_variable.unwrap().next;
+            loop_variable = &(loop_variable.as_ref().unwrap()).next;
         }
 
         None
@@ -59,31 +55,29 @@ where
             return;
         }
 
-        let mut list_head: KeyValue<K, V> = self.head.unwrap();
-
-        if list_head.key == key {
-            list_head.value = value;
+        if self.head.as_ref().unwrap().key == key {
+            self.head.as_mut().unwrap().value = value;
             return;
         }
         // Loop through list
-        // TODO: re-write this, this is a mess
-        let mut loop_variable = list_head.next;
+        let mut loop_variable = &mut self.head.as_mut().unwrap().next;
         while loop_variable.is_some() {
-            if loop_variable.unwrap().key == key {
-                loop_variable.unwrap().value = value;
+            if loop_variable.as_ref().unwrap().key == key {
+                self.head.as_mut().unwrap().value = value;
                 return;
             }
 
-            if loop_variable.unwrap().next.is_none() {
-                loop_variable.unwrap().next =
+            if loop_variable.as_mut().unwrap().next.is_none() {
+                loop_variable.as_mut().unwrap().next =
                     Some(Box::new(KeyValue::<K, V>::new(key, value, None)));
+
                 return;
             }
-            loop_variable = loop_variable.unwrap().next;
+
+            loop_variable = &mut loop_variable.as_mut().unwrap().next;
         }
     }
 }
-
 #[derive(Clone, Debug)]
 struct KeyValue<K, V> {
     pub key: K,
