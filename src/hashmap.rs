@@ -1,4 +1,6 @@
 use std::{
+    borrow::Borrow,
+    cell::RefCell,
     hash::{DefaultHasher, Hash, Hasher},
     rc::Rc,
     u64,
@@ -7,7 +9,7 @@ use std::{
 const DEFAULT_SIZE: u64 = 256;
 #[derive(Debug)]
 pub struct MyHashmap<K, V> {
-    // A guess at how many elements the hashmap will manage.
+    // How many elements are in the map
     size: u64,
 
     // The "table" which will hold all the data
@@ -16,45 +18,69 @@ pub struct MyHashmap<K, V> {
 }
 #[derive(Debug, Clone)]
 struct Bucket<K, V> {
-    head: Option<Rc<KeyValue<K, V>>>,
-    tail: Option<Rc<KeyValue<K, V>>>,
+    head: Option<KeyValue<K, V>>,
 }
 
-impl<K, V> Bucket<K, V>
+impl<'a, K, V> Bucket<K, V>
 where
-    K: PartialEq,
+    K: PartialEq + Clone,
+    V: Clone,
 {
     pub fn new() -> Self {
-        Self {
-            head: None,
-            tail: None,
-        }
+        Self { head: None }
     }
 
     pub fn find(&self, key: K) -> Option<&V> {
-        let mut c = &self.head;
-        while let Some(kv) = c {
-            if kv.key == key {
-                return Some(&kv.value);
+        if self.head.is_none() {
+            return None;
+        }
+
+        let mut list_head: KeyValue<K, V> = self.head.unwrap();
+
+        if list_head.key == key {
+            return Some(&list_head.value.clone());
+        }
+        // Loop through list
+        let mut loop_variable = list_head.next;
+        while loop_variable.is_some() {
+            if loop_variable.unwrap().key == key {
+                return Some(&loop_variable.unwrap().value);
             }
 
-            match &kv.next {
-                Some(_) => c = &kv.next,
-                None => c = &None,
-            }
+            loop_variable = loop_variable.unwrap().next;
         }
 
         None
     }
 
     pub fn insert(&mut self, key: K, value: V) {
-        let new_element = Rc::new(KeyValue::<K, V>::new(key, value, None));
-        if self.tail.is_none() {
-            self.head = Some(Rc::clone(&new_element));
-            self.tail = Some(Rc::clone(&new_element));
+        if self.head.is_none() {
+            self.head = Some(KeyValue::<K, V>::new(key, value, None));
+            return;
         }
 
-        self.tail = Some(Rc::clone(&new_element));
+        let mut list_head: KeyValue<K, V> = self.head.unwrap();
+
+        if list_head.key == key {
+            list_head.value = value;
+            return;
+        }
+        // Loop through list
+        // TODO: re-write this, this is a mess
+        let mut loop_variable = list_head.next;
+        while loop_variable.is_some() {
+            if loop_variable.unwrap().key == key {
+                loop_variable.unwrap().value = value;
+                return;
+            }
+
+            if loop_variable.unwrap().next.is_none() {
+                loop_variable.unwrap().next =
+                    Some(Box::new(KeyValue::<K, V>::new(key, value, None)));
+                return;
+            }
+            loop_variable = loop_variable.unwrap().next;
+        }
     }
 }
 
@@ -62,11 +88,11 @@ where
 struct KeyValue<K, V> {
     pub key: K,
     pub value: V,
-    pub next: Option<Rc<KeyValue<K, V>>>,
+    pub next: Option<Box<KeyValue<K, V>>>,
 }
 
 impl<K, V> KeyValue<K, V> {
-    fn new(key: K, value: V, next: Option<Rc<KeyValue<K, V>>>) -> Self {
+    fn new(key: K, value: V, next: Option<Box<KeyValue<K, V>>>) -> Self {
         Self { key, value, next }
     }
 }
@@ -119,6 +145,13 @@ mod tests {
     fn test_hashmap_insert() {
         let mut hm = MyHashmap::<String, i32>::with_capacity(10);
         hm.insert("hello".to_string(), 23);
+        println!("{:?}", hm)
+    }
+    #[test]
+    fn test_hashmap_insert_duplicate_key() {
+        let mut hm = MyHashmap::<String, i32>::with_capacity(10);
+        hm.insert("hello".to_string(), 23);
+        hm.insert("hello".to_string(), 24);
         println!("{:?}", hm)
     }
 }
