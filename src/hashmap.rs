@@ -14,6 +14,44 @@ pub struct MyHashmap<K, V> {
     hasher: fn(key: K) -> usize,
 }
 
+impl<K, V> MyHashmap<K, V>
+where
+    K: PartialEq + Clone + Hash,
+    V: Clone,
+{
+    pub fn new() -> MyHashmap<K, V> {
+        MyHashmap {
+            size: DEFAULT_SIZE,
+            hash_elements: vec![Bucket::<K, V>::new(); DEFAULT_SIZE as usize],
+            hasher: hash_key,
+        }
+    }
+
+    pub fn with_capacity(size: u64) -> MyHashmap<K, V> {
+        MyHashmap {
+            size,
+            hash_elements: vec![Bucket::<K, V>::new(); size as usize],
+            hasher: hash_key,
+        }
+    }
+
+    pub fn insert(&mut self, key: K, value: V) {
+        let hash = (self.hasher)(key.clone());
+        let bucket_index = hash % self.hash_elements.len();
+        self.hash_elements[bucket_index].insert(key.clone(), value.clone());
+    }
+
+    pub fn get(&self, key: K) -> Option<&V> {
+        let hash = (self.hasher)(key.clone());
+        let bucket_index = hash % self.hash_elements.len();
+        self.hash_elements[bucket_index].find(key.clone())
+    }
+    pub fn clear(&mut self) {
+        self.hash_elements.clear();
+        self.hash_elements = vec![Bucket::<K, V>::new(); self.size as usize];
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Bucket<K, V> {
     head: Option<KeyValue<K, V>>,
@@ -29,9 +67,7 @@ where
     }
 
     pub fn find(&self, key: K) -> Option<&V> {
-        if self.head.is_none() {
-            return None;
-        }
+        self.head.as_ref()?;
 
         if self.head.as_ref().unwrap().key == key {
             return Some(&self.head.as_ref().unwrap().value);
@@ -57,6 +93,12 @@ where
 
         if self.head.as_ref().unwrap().key == key {
             self.head.as_mut().unwrap().value = value;
+            return;
+        }
+
+        if self.head.as_ref().unwrap().next.is_none() {
+            self.head.as_mut().unwrap().next =
+                Some(Box::new(KeyValue::<K, V>::new(key, value, None)));
             return;
         }
         // Loop through list
@@ -91,34 +133,6 @@ impl<K, V> KeyValue<K, V> {
     }
 }
 
-impl<K, V> MyHashmap<K, V>
-where
-    K: PartialEq + Clone + Hash,
-    V: Clone,
-{
-    pub fn new() -> MyHashmap<K, V> {
-        MyHashmap {
-            size: DEFAULT_SIZE,
-            hash_elements: vec![Bucket::<K, V>::new(); DEFAULT_SIZE as usize],
-            hasher: hash_key,
-        }
-    }
-
-    pub fn with_capacity(size: u64) -> MyHashmap<K, V> {
-        MyHashmap {
-            size,
-            hash_elements: vec![Bucket::<K, V>::new(); size as usize],
-            hasher: hash_key,
-        }
-    }
-
-    pub fn insert(&mut self, key: K, value: V) {
-        let hash = (self.hasher)(key.clone());
-        let bucket_index = hash % self.hash_elements.len();
-        self.hash_elements[bucket_index].insert(key.clone(), value);
-    }
-}
-
 // TODO: Implement a real hash function
 fn hash_key<T: Hash>(key: T) -> usize {
     let mut h = DefaultHasher::new();
@@ -132,20 +146,52 @@ mod tests {
 
     #[test]
     fn test_hashmap_new() {
-        let hm = MyHashmap::<String, i32>::new();
+        let _hm = MyHashmap::<String, i32>::new();
     }
 
     #[test]
     fn test_hashmap_insert() {
         let mut hm = MyHashmap::<String, i32>::with_capacity(10);
         hm.insert("hello".to_string(), 23);
-        println!("{:?}", hm)
+        let result = hm.get("hello".to_string());
+        assert!(result.is_some());
+        assert_eq!(*result.unwrap(), 23);
     }
     #[test]
     fn test_hashmap_insert_duplicate_key() {
         let mut hm = MyHashmap::<String, i32>::with_capacity(10);
         hm.insert("hello".to_string(), 23);
         hm.insert("hello".to_string(), 24);
-        println!("{:?}", hm)
+        let result = hm.get("hello".to_string());
+        assert!(result.is_some());
+        assert_eq!(*result.unwrap(), 24);
+    }
+    #[test]
+    fn test_hashmap_collisions() {
+        let mut hm = MyHashmap::<String, i32>::with_capacity(10);
+        hm.insert("hello1".to_string(), 1);
+        hm.insert("hello2".to_string(), 2);
+        hm.insert("hello3".to_string(), 3);
+        hm.insert("hello4".to_string(), 4);
+        hm.insert("hello5".to_string(), 5);
+        hm.insert("hello6".to_string(), 6);
+        hm.insert("hello7".to_string(), 7);
+        hm.insert("hello8".to_string(), 8);
+        hm.insert("hello9".to_string(), 9);
+        hm.insert("hello10".to_string(), 10);
+        hm.insert("hello11".to_string(), 11);
+        hm.insert("hello12".to_string(), 12);
+        assert_eq!(*hm.get("hello1".to_string()).unwrap(), 1);
+        assert_eq!(*hm.get("hello2".to_string()).unwrap(), 2);
+        assert_eq!(*hm.get("hello3".to_string()).unwrap(), 3);
+        assert_eq!(*hm.get("hello4".to_string()).unwrap(), 4);
+        assert_eq!(*hm.get("hello5".to_string()).unwrap(), 5);
+        assert_eq!(*hm.get("hello6".to_string()).unwrap(), 6);
+        assert_eq!(*hm.get("hello7".to_string()).unwrap(), 7);
+        assert_eq!(*hm.get("hello8".to_string()).unwrap(), 8);
+        assert_eq!(*hm.get("hello9".to_string()).unwrap(), 9);
+        assert_eq!(*hm.get("hello10".to_string()).unwrap(), 10);
+        assert_eq!(*hm.get("hello11".to_string()).unwrap(), 11);
+        assert_eq!(*hm.get("hello12".to_string()).unwrap(), 12);
     }
 }
