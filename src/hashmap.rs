@@ -20,11 +20,7 @@ where
     V: Clone,
 {
     pub fn new() -> MyHashmap<K, V> {
-        MyHashmap {
-            size: DEFAULT_SIZE,
-            hash_elements: vec![Bucket::<K, V>::new(); DEFAULT_SIZE as usize],
-            hasher: hash_key,
-        }
+        MyHashmap::with_capacity(DEFAULT_SIZE)
     }
 
     pub fn with_capacity(size: u64) -> MyHashmap<K, V> {
@@ -50,14 +46,20 @@ where
         self.hash_elements.clear();
         self.hash_elements = vec![Bucket::<K, V>::new(); self.size as usize];
     }
+
+    pub fn remove(&mut self, key: K) {
+        let hash = (self.hasher)(key.clone());
+        let bucket_index = hash % self.hash_elements.len();
+        self.hash_elements[bucket_index].remove(key.clone());
+    }
 }
 
 #[derive(Debug, Clone)]
 struct Bucket<K, V> {
-    head: Option<KeyValue<K, V>>,
+    head: Option<Box<KeyValue<K, V>>>,
 }
 
-impl<'a, K, V> Bucket<K, V>
+impl<K, V> Bucket<K, V>
 where
     K: PartialEq + Clone,
     V: Clone,
@@ -87,7 +89,7 @@ where
 
     pub fn insert(&mut self, key: K, value: V) {
         if self.head.is_none() {
-            self.head = Some(KeyValue::<K, V>::new(key, value, None));
+            self.head = Some(Box::new(KeyValue::<K, V>::new(key, value, None)));
             return;
         }
 
@@ -119,6 +121,36 @@ where
             loop_variable = &mut loop_variable.as_mut().unwrap().next;
         }
     }
+
+    pub fn remove(&mut self, key: K) {
+        if self.head.is_none() {
+            return;
+        }
+
+        if self.head.as_ref().unwrap().key == key {
+            self.head = self.head.as_ref().unwrap().next.to_owned();
+            return;
+        }
+
+        let mut previous = self.head.to_owned();
+        let mut current = previous.as_ref().unwrap().as_ref().next.to_owned();
+
+        while current.as_ref().is_some() {
+            if current.is_none() {
+                return;
+            }
+
+            if current.as_ref().unwrap().key == key {
+                previous
+                    .as_mut()
+                    .unwrap()
+                    .next(current.as_mut().unwrap().next.to_owned());
+            }
+
+            previous = current;
+            current = previous.as_mut().unwrap().next.to_owned();
+        }
+    }
 }
 #[derive(Clone, Debug)]
 struct KeyValue<K, V> {
@@ -130,6 +162,10 @@ struct KeyValue<K, V> {
 impl<K, V> KeyValue<K, V> {
     fn new(key: K, value: V, next: Option<Box<KeyValue<K, V>>>) -> Self {
         Self { key, value, next }
+    }
+
+    fn next(&mut self, next: Option<Box<KeyValue<K, V>>>) {
+        self.next = next;
     }
 }
 
@@ -193,5 +229,158 @@ mod tests {
         assert_eq!(*hm.get("hello10".to_string()).unwrap(), 10);
         assert_eq!(*hm.get("hello11".to_string()).unwrap(), 11);
         assert_eq!(*hm.get("hello12".to_string()).unwrap(), 12);
+    }
+
+    #[test]
+    fn test_hashmap_clear() {
+        let mut hm = MyHashmap::new();
+        hm.insert("test".to_string(), 1);
+        hm.insert("test1".to_string(), 1);
+        hm.insert("test2".to_string(), 1);
+        hm.insert("test3".to_string(), 1);
+        hm.clear();
+        assert!(hm.get("test".to_string()).is_none());
+        assert!(hm.get("test1".to_string()).is_none());
+        assert!(hm.get("test2".to_string()).is_none());
+        assert!(hm.get("test3".to_string()).is_none());
+    }
+
+    #[test]
+    fn hashmap_remove() {
+        let mut hm = MyHashmap::new();
+        hm.insert("test".to_string(), 1);
+        assert!(hm.get("test".to_string()).is_some());
+        hm.remove("test".to_string());
+        assert!(hm.get("test".to_string()).is_none());
+    }
+    #[test]
+    fn test_hashmap_remove_many() {
+        let mut hm = MyHashmap::with_capacity(10);
+        hm.insert("test".to_string(), 1);
+        hm.insert("test1".to_string(), 1);
+        hm.insert("test2".to_string(), 1);
+        hm.insert("test3".to_string(), 1);
+        hm.insert("test4".to_string(), 1);
+        hm.insert("test5".to_string(), 1);
+        hm.insert("test6".to_string(), 1);
+        hm.insert("test7".to_string(), 1);
+        hm.insert("test8".to_string(), 1);
+        hm.insert("test9".to_string(), 1);
+        hm.insert("test10".to_string(), 1);
+        hm.insert("test11".to_string(), 1);
+        assert!(hm.get("test".to_string()).is_some());
+        assert!(hm.get("test1".to_string()).is_some());
+        assert!(hm.get("test2".to_string()).is_some());
+        assert!(hm.get("test3".to_string()).is_some());
+        assert!(hm.get("test4".to_string()).is_some());
+        assert!(hm.get("test5".to_string()).is_some());
+        assert!(hm.get("test6".to_string()).is_some());
+        assert!(hm.get("test7".to_string()).is_some());
+        assert!(hm.get("test8".to_string()).is_some());
+        assert!(hm.get("test9".to_string()).is_some());
+        assert!(hm.get("test10".to_string()).is_some());
+        assert!(hm.get("test11".to_string()).is_some());
+
+        hm.remove("test".to_string());
+        assert!(hm.get("test".to_string()).is_none());
+        assert!(hm.get("test1".to_string()).is_some());
+        assert!(hm.get("test2".to_string()).is_some());
+        assert!(hm.get("test3".to_string()).is_some());
+        assert!(hm.get("test4".to_string()).is_some());
+        assert!(hm.get("test5".to_string()).is_some());
+        assert!(hm.get("test6".to_string()).is_some());
+        assert!(hm.get("test7".to_string()).is_some());
+        assert!(hm.get("test8".to_string()).is_some());
+        assert!(hm.get("test9".to_string()).is_some());
+        assert!(hm.get("test10".to_string()).is_some());
+        assert!(hm.get("test11".to_string()).is_some());
+
+        hm.remove("test1".to_string());
+        assert!(hm.get("test1".to_string()).is_none());
+        assert!(hm.get("test2".to_string()).is_some());
+        assert!(hm.get("test3".to_string()).is_some());
+        assert!(hm.get("test4".to_string()).is_some());
+        assert!(hm.get("test5".to_string()).is_some());
+        assert!(hm.get("test6".to_string()).is_some());
+        assert!(hm.get("test7".to_string()).is_some());
+        assert!(hm.get("test8".to_string()).is_some());
+        assert!(hm.get("test9".to_string()).is_some());
+        assert!(hm.get("test10".to_string()).is_some());
+        assert!(hm.get("test11".to_string()).is_some());
+
+        hm.remove("test2".to_string());
+        assert!(hm.get("test2".to_string()).is_none());
+        assert!(hm.get("test3".to_string()).is_some());
+        assert!(hm.get("test4".to_string()).is_some());
+        assert!(hm.get("test5".to_string()).is_some());
+        assert!(hm.get("test6".to_string()).is_some());
+        assert!(hm.get("test7".to_string()).is_some());
+        assert!(hm.get("test8".to_string()).is_some());
+        assert!(hm.get("test9".to_string()).is_some());
+        assert!(hm.get("test10".to_string()).is_some());
+        assert!(hm.get("test11".to_string()).is_some());
+
+        hm.remove("test3".to_string());
+        assert!(hm.get("test3".to_string()).is_none());
+        assert!(hm.get("test4".to_string()).is_some());
+        assert!(hm.get("test5".to_string()).is_some());
+        assert!(hm.get("test6".to_string()).is_some());
+        assert!(hm.get("test7".to_string()).is_some());
+        assert!(hm.get("test8".to_string()).is_some());
+        assert!(hm.get("test9".to_string()).is_some());
+        assert!(hm.get("test10".to_string()).is_some());
+        assert!(hm.get("test11".to_string()).is_some());
+
+        hm.remove("test4".to_string());
+        assert!(hm.get("test4".to_string()).is_none());
+        assert!(hm.get("test5".to_string()).is_some());
+        assert!(hm.get("test6".to_string()).is_some());
+        assert!(hm.get("test7".to_string()).is_some());
+        assert!(hm.get("test8".to_string()).is_some());
+        assert!(hm.get("test9".to_string()).is_some());
+        assert!(hm.get("test10".to_string()).is_some());
+        assert!(hm.get("test11".to_string()).is_some());
+
+        hm.remove("test5".to_string());
+        assert!(hm.get("test5".to_string()).is_none());
+        assert!(hm.get("test6".to_string()).is_some());
+        assert!(hm.get("test7".to_string()).is_some());
+        assert!(hm.get("test8".to_string()).is_some());
+        assert!(hm.get("test9".to_string()).is_some());
+        assert!(hm.get("test10".to_string()).is_some());
+        assert!(hm.get("test11".to_string()).is_some());
+
+        hm.remove("test6".to_string());
+        assert!(hm.get("test6".to_string()).is_none());
+        assert!(hm.get("test7".to_string()).is_some());
+        assert!(hm.get("test8".to_string()).is_some());
+        assert!(hm.get("test9".to_string()).is_some());
+        assert!(hm.get("test10".to_string()).is_some());
+        assert!(hm.get("test11".to_string()).is_some());
+
+        hm.remove("test7".to_string());
+        assert!(hm.get("test7".to_string()).is_none());
+        assert!(hm.get("test8".to_string()).is_some());
+        assert!(hm.get("test9".to_string()).is_some());
+        assert!(hm.get("test10".to_string()).is_some());
+        assert!(hm.get("test11".to_string()).is_some());
+
+        hm.remove("test8".to_string());
+        assert!(hm.get("test8".to_string()).is_none());
+        assert!(hm.get("test9".to_string()).is_some());
+        assert!(hm.get("test10".to_string()).is_some());
+        assert!(hm.get("test11".to_string()).is_some());
+
+        hm.remove("test9".to_string());
+        assert!(hm.get("test9".to_string()).is_none());
+        assert!(hm.get("test10".to_string()).is_some());
+        assert!(hm.get("test11".to_string()).is_some());
+
+        hm.remove("test10".to_string());
+        assert!(hm.get("test10".to_string()).is_none());
+        assert!(hm.get("test11".to_string()).is_some());
+
+        hm.remove("test11".to_string());
+        assert!(hm.get("test11".to_string()).is_none());
     }
 }

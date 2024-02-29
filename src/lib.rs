@@ -1,17 +1,12 @@
+use hashmap::MyHashmap;
+
 mod hashmap;
 
-pub fn add(left: usize, right: usize) -> usize {
-    let _h = hashmap::MyHashmap::<String, String>::new();
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub fn hashmap() {
+    let mut h = MyHashmap::new();
+    h.insert("1", "one");
+    h.remove("2");
+    let x = h.get("1");
+    println!("{:?}", x);
+    h.clear();
 }
