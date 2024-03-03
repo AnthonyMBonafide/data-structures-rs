@@ -71,17 +71,19 @@ where
     pub fn find(&self, key: K) -> Option<&V> {
         self.head.as_ref()?;
 
-        if self.head.as_ref().unwrap().key == key {
-            return Some(&self.head.as_ref().unwrap().value);
+        let head_kv = self.head.as_ref().unwrap();
+        if head_kv.key == key {
+            return Some(&head_kv.value);
         }
         // Loop through list
-        let mut loop_variable = &self.head.as_ref().unwrap().next;
-        while loop_variable.is_some() {
-            if loop_variable.as_ref().unwrap().key == key {
-                return Some(&loop_variable.as_ref().unwrap().value);
+        let mut next_kv = &head_kv.next;
+        while next_kv.is_some() {
+            let current_kv = next_kv.as_ref().unwrap();
+            if next_kv.as_ref().unwrap().key == key {
+                return Some(&current_kv.value);
             }
 
-            loop_variable = &(loop_variable.as_ref().unwrap()).next;
+            next_kv = &current_kv.next;
         }
 
         None
@@ -93,32 +95,32 @@ where
             return;
         }
 
-        if self.head.as_ref().unwrap().key == key {
-            self.head.as_mut().unwrap().value = value;
+        let h = self.head.as_mut().unwrap();
+        if h.key == key {
+            h.value = value;
             return;
         }
 
-        if self.head.as_ref().unwrap().next.is_none() {
-            self.head.as_mut().unwrap().next =
-                Some(Box::new(KeyValue::<K, V>::new(key, value, None)));
+        if h.next.is_none() {
+            h.next = Some(Box::new(KeyValue::<K, V>::new(key, value, None)));
             return;
         }
         // Loop through list
-        let mut loop_variable = &mut self.head.as_mut().unwrap().next;
-        while loop_variable.is_some() {
-            if loop_variable.as_ref().unwrap().key == key {
-                self.head.as_mut().unwrap().value = value;
+        let mut next_kv = &mut h.next;
+        while next_kv.is_some() {
+            let current_kv = next_kv.as_mut().unwrap();
+            if current_kv.key == key {
+                h.value = value;
                 return;
             }
 
-            if loop_variable.as_mut().unwrap().next.is_none() {
-                loop_variable.as_mut().unwrap().next =
-                    Some(Box::new(KeyValue::<K, V>::new(key, value, None)));
+            if current_kv.next.is_none() {
+                current_kv.next = Some(Box::new(KeyValue::<K, V>::new(key, value, None)));
 
                 return;
             }
 
-            loop_variable = &mut loop_variable.as_mut().unwrap().next;
+            next_kv = &mut current_kv.next;
         }
     }
 
@@ -127,19 +129,16 @@ where
             return;
         }
 
-        if self.head.as_ref().unwrap().key == key {
-            self.head = self.head.as_ref().unwrap().next.to_owned();
+        let h = self.head.as_ref().unwrap();
+        if h.key == key {
+            self.head = h.next.to_owned();
             return;
         }
 
         let mut previous = self.head.to_owned();
         let mut current = previous.as_ref().unwrap().as_ref().next.to_owned();
 
-        while current.as_ref().is_some() {
-            if current.is_none() {
-                return;
-            }
-
+        while current.is_some() {
             if current.as_ref().unwrap().key == key {
                 previous
                     .as_mut()
