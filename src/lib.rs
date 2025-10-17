@@ -1,6 +1,7 @@
 use hashmap::MyHashmap;
 
 mod hashmap;
+mod tree;
 
 pub fn hashmap() {
     let mut h = MyHashmap::new();
