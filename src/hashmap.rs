@@ -1,7 +1,4 @@
-use std::{
-    hash::{DefaultHasher, Hash, Hasher},
-    u64,
-};
+use std::hash::{DefaultHasher, Hash, Hasher};
 
 const DEFAULT_SIZE: u64 = 256;
 #[derive(Debug)]
