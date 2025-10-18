@@ -24,7 +24,7 @@ where
 
             if c.value < item {
                 if c.left_child.is_none() {
-                    c.left_child = Some(Box::new(Node::new(item)));
+                    // c.left_child = Some(Box::new(Node::new(item)));
                     return;
                 }
                 current_node = c.left_child.as_ref().map(|i| i.as_ref());
@@ -41,7 +41,7 @@ where
         }
     }
 
-    pub fn remove(&mut self, item: T) {}
+    pub fn remove(&mut self, _: T) {}
 
     pub fn has(&self, item: T) -> bool {
         // TODO: Walk through the tree to find if there is a math

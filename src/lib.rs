@@ -1,13 +1,15 @@
-use hashmap::MyHashmap;
+use map::hashmap::MyHashmap;
+use map::types::Map;
 
-mod hashmap;
+mod cell;
+mod map;
 mod tree;
 
 pub fn hashmap() {
     let mut h = MyHashmap::new();
     h.insert("1", "one");
-    h.remove("2");
-    let x = h.get("1");
+    h.remove(&"2");
+    let x = h.get(&"1");
     println!("{:?}", x);
     h.clear();
 }
