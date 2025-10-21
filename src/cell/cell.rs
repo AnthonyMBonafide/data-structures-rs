@@ -1,5 +1,6 @@
 use std::cell::UnsafeCell;
-
+/// Cell a structure for interior mutability by only giving out a reference to the underlying data
+/// and allowing mutations via references.
 pub struct Cell<T> {
     value: UnsafeCell<T>,
 }
